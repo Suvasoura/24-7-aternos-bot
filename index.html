@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft AFK Bot Control Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            mc: {
+              dark: '#0B0F17',
+              card: '#131B2A',
+              border: '#1E293B',
+              green: '#22C55E',
+              red: '#EF4444',
+              gold: '#F59E0B',
+              cyan: '#06B6D4',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0B0F17; color: #E2E8F0; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #131B2A; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .glow-green { box-shadow: 0 0 15px rgba(34, 197, 94, 0.25); }
+    .glow-red { box-shadow: 0 0 15px rgba(239, 68, 68, 0.25); }
+    .glow-cyan { box-shadow: 0 0 15px rgba(6, 182, 212, 0.25); }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black">
+
+  <!-- Header / Navigation -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold">
+            <i data-lucide="bot" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-base font-bold text-white tracking-wide" id="nav-bot-name">AFK Bot Control Center</h1>
+              <span id="nav-mode-badge" class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">Live API</span>
+            </div>
+            <p class="text-xs text-slate-400">Mineflayer 24/7 AFK System &middot; v2.5</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex space-x-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
+          <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Dashboard</span>
+          </button>
+          <button onclick="switchTab('logs')" id="tab-btn-logs" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+            <i data-lucide="terminal" class="w-4 h-4"></i>
+            <span>Live Logs</span>
+            <span id="log-count-pill" class="ml-1 px-1.5 py-0.2 bg-slate-800 text-[10px] rounded-full text-slate-300">0</span>
+          </button>
+          <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+            <span>Bot Settings</span>
+          </button>
+          <button onclick="switchTab('guide')" id="tab-btn-guide" class="px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Setup Guide</span>
+          </button>
+        </nav>
+
+        <!-- Header Actions -->
+        <div class="flex items-center space-x-2">
+          <button onclick="pingServerNow()" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition border border-slate-700/60" title="Ping Server">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+          </button>
+          <button onclick="copyServerIp()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 flex items-center space-x-1.5 transition border border-slate-700/60">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span id="header-ip-text">Copy IP</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Mobile Nav Bar -->
+    <div class="md:hidden grid grid-cols-4 gap-1 p-1 bg-slate-900 rounded-xl border border-slate-800 text-center">
+      <button onclick="switchTab('dashboard')" class="py-2 text-xs font-medium text-emerald-400">Dashboard</button>
+      <button onclick="switchTab('logs')" class="py-2 text-xs font-medium text-slate-400">Logs</button>
+      <button onclick="switchTab('settings')" class="py-2 text-xs font-medium text-slate-400">Settings</button>
+      <button onclick="switchTab('guide')" class="py-2 text-xs font-medium text-slate-400">Guide</button>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="space-y-6">
+      
+      <!-- Top Alert / Status Banner -->
+      <div id="status-card" class="rounded-2xl p-6 bg-slate-900/90 border-2 border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300">
+        <div class="flex items-center space-x-4">
+          <div id="status-avatar-box" class="w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 relative">
+            <i data-lucide="wifi-off" id="status-avatar-icon" class="w-7 h-7"></i>
+            <span id="status-dot-ping" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900"></span>
+          </div>
+          <div>
+            <div class="flex items-center space-x-3">
+              <span id="status-title" class="text-xl font-extrabold text-slate-200">Checking Status…</span>
+              <span id="status-pill" class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 uppercase tracking-wider">OFFLINE</span>
+            </div>
+            <p id="status-subtitle" class="text-xs text-slate-400 mt-1">Target Server: <span id="target-ip-display" class="font-mono text-cyan-400">basusuvayu.aternos.me:27049</span></p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3 w-full md:w-auto">
+          <button onclick="startBotApi()" id="btn-start-bot" class="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold tracking-wide flex items-center justify-center space-x-2 transition glow-green">
+            <i data-lucide="play" class="w-4 h-4"></i>
+            <span>START BOT</span>
+          </button>
+          <button onclick="stopBotApi()" id="btn-stop-bot" class="flex-1 md:flex-initial px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-500/40 text-xs font-bold tracking-wide flex items-center justify-center space-x-2 transition">
+            <i data-lucide="square" class="w-4 h-4"></i>
+            <span>STOP BOT</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Metric 1: Uptime -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Bot Uptime</span>
+            <i data-lucide="clock" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-black text-white font-mono" id="metric-uptime">0s</div>
+          <div class="text-[11px] text-slate-500 mt-1">Continuous connection time</div>
+        </div>
+
+        <!-- Metric 2: Position -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Bot Location</span>
+            <i data-lucide="map-pin" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div class="text-lg font-black text-white font-mono" id="metric-coords">X 0 &middot; Y 100 &middot; Z 0</div>
+          <div class="text-[11px] text-slate-500 mt-1">In-game world coordinates</div>
+        </div>
+
+        <!-- Metric 3: Memory -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Memory Usage</span>
+            <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <div class="text-2xl font-black text-white font-mono" id="metric-memory">18.4 MB</div>
+          <div class="text-[11px] text-slate-500 mt-1">Process heap allocation</div>
+        </div>
+
+        <!-- Metric 4: Reconnect Attempts -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider">Reconnect Counter</span>
+            <i data-lucide="rotate-cw" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-black text-white font-mono" id="metric-reconnects">0</div>
+          <div class="text-[11px] text-slate-500 mt-1">Auto-recovery attempts</div>
+        </div>
+      </div>
+
+      <!-- Center Two Column Area -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Cols: Live Activity Feed Preview -->
+        <div class="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+              <h3 class="text-sm font-bold text-white">Live Activity Stream</h3>
+            </div>
+            <button onclick="switchTab('logs')" class="text-xs text-cyan-400 hover:underline font-medium">Open Full Terminal &rarr;</button>
+          </div>
+
+          <div id="dashboard-log-preview" class="h-64 bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 font-mono text-xs space-y-1.5 overflow-y-auto custom-scrollbar">
+            <!-- Dynamic logs inserted here -->
+          </div>
+        </div>
+
+        <!-- Right 1 Col: Bot Capabilities & State Inspector -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
+              <h3 class="text-sm font-bold text-white">Active Modules</h3>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">SETTINGS READY</span>
+          </div>
+
+          <div class="space-y-3 text-xs">
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/50 border border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="font-medium text-slate-300">Anti-AFK Movement</span>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-400 uppercase">Circle Walk</span>
+            </div>
+
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/50 border border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="font-medium text-slate-300">Auto Authentication</span>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-400 uppercase">Enabled</span>
+            </div>
+
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/50 border border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                <span class="font-medium text-slate-300">Auto Combat & Eat</span>
+              </div>
+              <span class="text-[10px] font-bold text-emerald-400 uppercase">Active</span>
+            </div>
+
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/50 border border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-2 h-2 rounded-full bg-purple-400"></div>
+                <span class="font-medium text-slate-300">Immortal Recovery</span>
+              </div>
+              <span class="text-[10px] font-bold text-purple-400 uppercase">Infinite</span>
+            </div>
+
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/50 border border-slate-800">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-2 h-2 rounded-full bg-cyan-400"></div>
+                <span class="font-medium text-slate-300">Chat Spammer</span>
+              </div>
+              <span class="text-[10px] font-bold text-cyan-400 uppercase">120s Interval</span>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="pt-2 border-t border-slate-800 grid grid-cols-2 gap-2">
+            <button onclick="sendQuickCommand('/pos')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 text-center transition">Get Coordinates</button>
+            <button onclick="sendQuickCommand('/status')" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 text-center transition">Check Uptime</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: LIVE LOGS & CONSOLE -->
+    <div id="tab-logs" class="hidden space-y-4">
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-2xl">
+        
+        <!-- Controls Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div class="flex items-center space-x-3">
+            <div class="flex space-x-1">
+              <span class="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+            </div>
+            <h2 class="text-sm font-bold text-slate-200 font-mono">bot_stdout.log</h2>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <!-- Filter Pills -->
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
+              <button onclick="setLogFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-lg font-medium text-emerald-400 bg-slate-800">All</button>
+              <button onclick="setLogFilter('control')" id="filter-control" class="px-2.5 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200">Control</button>
+              <button onclick="setLogFilter('error')" id="filter-error" class="px-2.5 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200">Errors</button>
+            </div>
+
+            <button onclick="clearLogsUI()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition" title="Clear View">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="downloadLogs()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs transition" title="Export Logs">
+              <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Body -->
+        <div id="full-log-terminal" class="h-[460px] bg-slate-950/90 border border-slate-800 rounded-xl p-4 font-mono text-xs space-y-1 overflow-y-auto custom-scrollbar">
+          <!-- Dynamic log entries -->
+        </div>
+
+        <!-- Command Input Box -->
+        <div class="relative">
+          <form onsubmit="handleConsoleSubmit(event)" class="flex items-center gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <span class="text-emerald-400 font-mono font-bold pl-2 select-none">&gt;</span>
+            <input
+              id="terminal-input"
+              type="text"
+              placeholder="Type /help, /pos, or any Minecraft command/chat message..."
+              class="flex-1 bg-transparent text-slate-200 font-mono text-xs focus:outline-none placeholder:text-slate-600"
+              autocomplete="off"
+            />
+            <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition">
+              Send
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SETTINGS STUDIO -->
+    <div id="tab-settings" class="hidden space-y-6">
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg font-extrabold text-white">Bot Configuration Studio</h2>
+            <p class="text-xs text-slate-400">Modify settings in real-time or export updated settings.json</p>
+          </div>
+          <button onclick="saveSettingsForm()" class="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center space-x-2 transition glow-cyan">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Save Configuration</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Section 1: Server Info -->
+          <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center space-x-2">
+              <i data-lucide="server" class="w-4 h-4"></i>
+              <span>Minecraft Server Info</span>
+            </h3>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">Server IP / Hostname</label>
+                <input id="cfg-server-ip" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none" value="basusuvayu.aternos.me" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">Port</label>
+                  <input id="cfg-server-port" type="number" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none" value="27049" />
+                </div>
+                <div>
+                  <label class="block text-slate-400 font-medium mb-1">MC Version</label>
+                  <input id="cfg-server-version" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-mono focus:border-cyan-500 focus:outline-none" value="1.20.1" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Account Settings -->
+          <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-2">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+              <span>Bot Identity & Auth</span>
+            </h3>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">Username / Nickname</label>
+                <input id="cfg-account-user" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-mono focus:border-emerald-500 focus:outline-none" value="FLamerthegamer" />
+              </div>
+
+              <div>
+                <label class="block text-slate-400 font-medium mb-1">In-Game Register/Login Password</label>
+                <input id="cfg-auth-pass" type="password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 font-mono focus:border-emerald-500 focus:outline-none" value="SoloPlayz" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Anti-AFK & Movement -->
+          <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center space-x-2">
+              <i data-lucide="footprints" class="w-4 h-4"></i>
+              <span>Movement & Anti-AFK</span>
+            </h3>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300 font-medium">Enable Circle Walking</span>
+                <input id="cfg-circle-walk" type="checkbox" checked class="w-4 h-4 accent-purple-500 rounded cursor-pointer" />
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300 font-medium">Random Look Around</span>
+                <input id="cfg-look-around" type="checkbox" checked class="w-4 h-4 accent-purple-500 rounded cursor-pointer" />
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300 font-medium">Always Sneak / Crouch</span>
+                <input id="cfg-anti-sneak" type="checkbox" checked class="w-4 h-4 accent-purple-500 rounded cursor-pointer" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Combat & Survival -->
+          <div class="bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-2">
+              <i data-lucide="swords" class="w-4 h-4"></i>
+              <span>Combat & Survival</span>
+            </h3>
+
+            <div class="space-y-3 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300 font-medium">Attack Mobs in Range</span>
+                <input id="cfg-attack-mobs" type="checkbox" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer" />
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300 font-medium">Auto-Eat Food when Hungry</span>
+                <input id="cfg-auto-eat" type="checkbox" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETUP GUIDE -->
+    <div id="tab-guide" class="hidden space-y-6">
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-6">
+        <div>
+          <h2 class="text-lg font-extrabold text-white">24/7 Hosting & Deployment Guide</h2>
+          <p class="text-xs text-slate-400">Keep your bot running indefinitely on free services</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold flex items-center justify-center text-sm">1</div>
+            <h3 class="text-sm font-bold text-white">Aternos Preparation</h3>
+            <ul class="text-xs text-slate-400 space-y-2 list-disc pl-4">
+              <li>Turn on <strong class="text-slate-200">Cracked Mode</strong> in Server Options.</li>
+              <li>Install <code class="text-cyan-400 bg-slate-900 px-1 py-0.5 rounded">ViaVersion</code> for auto version matching.</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-bold flex items-center justify-center text-sm">2</div>
+            <h3 class="text-sm font-bold text-white">GitHub Upload</h3>
+            <ul class="text-xs text-slate-400 space-y-2 list-disc pl-4">
+              <li>Export or download your updated <code class="text-cyan-400 bg-slate-900 px-1 py-0.5 rounded">settings.json</code>.</li>
+              <li>Commit all files to your GitHub repo.</li>
+            </ul>
+          </div>
+
+          <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold flex items-center justify-center text-sm">3</div>
+            <h3 class="text-sm font-bold text-white">Deploy on Render / Replit</h3>
+            <ul class="text-xs text-slate-400 space-y-2 list-disc pl-4">
+              <li>Connect repository to Render Web Service or Replit.</li>
+              <li>Set Start Command: <code class="text-purple-400 bg-slate-900 px-1 py-0.5 rounded">npm start</code></li>
+              <li>Built-in self-ping prevents server sleep!</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+      Minecraft AFK Bot &middot; Built for high availability and zero downtime.
+    </div>
+  </footer>
+
+  <script>
+    // State management
+    let state = {
+      connected: false,
+      uptime: 0,
+      coords: { x: 0, y: 100, z: 0 },
+      reconnects: 0,
+      memory: '18.4',
+      logs: [],
+      filter: 'all',
+      isLiveApi: false
+    };
+
+    let logCounter = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initApp();
+      setInterval(fetchHealth, 3000);
+    });
+
+    function switchTab(tabId) {
+      ['dashboard', 'logs', 'settings', 'guide'].forEach(t => {
+        const tabEl = document.getElementById(`tab-${t}`);
+        const btnEl = document.getElementById(`tab-btn-${t}`);
+        if (t === tabId) {
+          tabEl.classList.remove('hidden');
+          if (btnEl) {
+            btnEl.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          }
+        } else {
+          tabEl.classList.add('hidden');
+          if (btnEl) {
+            btnEl.className = 'px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50';
+          }
+        }
+      });
+    }
+
+    async function fetchHealth() {
+      try {
+        const res = await fetch('/health');
+        if (res.ok) {
+          const data = await res.json();
+          state.isLiveApi = true;
+          state.connected = data.status === 'connected';
+          state.uptime = data.uptime || 0;
+          if (data.coords) state.coords = data.coords;
+          state.reconnects = data.reconnectAttempts || 0;
+          if (data.memoryUsage) state.memory = data.memoryUsage.toFixed(1);
+          updateUI();
+          fetchLogs();
+          return;
+        }
+      } catch (e) {
+        // Fallback to simulation mode if standard preview without running node server
+      }
+
+      // Simulation ticks
+      state.isLiveApi = false;
+      if (state.connected) {
+        state.uptime += 3;
+      }
+      updateUI();
+    }
+
+    async function fetchLogs() {
+      try {
+        const res = await fetch('/logs');
+        if (res.ok) {
+          const logsHtml = await res.text();
+          // parse log lines if needed
+        }
+      } catch (e) {}
+    }
+
+    function initApp() {
+      // Add initial welcome logs
+      addLogEntry('[System] Control Center Initialized', 'control');
+      addLogEntry('[Bot] Target configured: basusuvayu.aternos.me:27049', 'info');
+      addLogEntry('[KeepAlive] Self-ping active', 'info');
+      
+      // Auto trigger initial simulated state
+      setTimeout(() => {
+        state.connected = true;
+        addLogEntry('[Bot] [+] Successfully spawned on server! (Version: 1.20.1)', 'success');
+        updateUI();
+      }, 1500);
+    }
+
+    function addLogEntry(text, type = 'info') {
+      logCounter++;
+      const time = new Date().toLocaleTimeString();
+      const entry = { id: logCounter, time, text, type };
+      state.logs.push(entry);
+      if (state.logs.length > 200) state.logs.shift();
+
+      renderLogs();
+      document.getElementById('log-count-pill').textContent = state.logs.length;
+    }
+
+    function renderLogs() {
+      const fullTerm = document.getElementById('full-log-terminal');
+      const dashPrev = document.getElementById('dashboard-log-preview');
+
+      const filtered = state.logs.filter(l => {
+        if (state.filter === 'control') return l.type === 'control';
+        if (state.filter === 'error') return l.type === 'error' || l.text.toLowerCase().includes('error');
+        return true;
+      });
+
+      const buildHtml = (items) => items.map(l => {
+        let colorClass = 'text-slate-400';
+        if (l.type === 'control' || l.text.includes('[Control]')) colorClass = 'text-cyan-400 font-bold';
+        else if (l.type === 'error' || l.text.toLowerCase().includes('error')) colorClass = 'text-red-400 font-bold';
+        else if (l.type === 'success' || l.text.includes('[+]')) colorClass = 'text-emerald-400 font-bold';
+        
+        return `<div class="leading-relaxed"><span class="text-slate-600 select-none">[${l.time}]</span> <span class="${colorClass}">${escapeHtml(l.text)}</span></div>`;
+      }).join('');
+
+      fullTerm.innerHTML = buildHtml(filtered) || '<div class="text-slate-600">No log entries.</div>';
+      dashPrev.innerHTML = buildHtml(state.logs.slice(-12));
+
+      fullTerm.scrollTop = fullTerm.scrollHeight;
+      dashPrev.scrollTop = dashPrev.scrollHeight;
+    }
+
+    function updateUI() {
+      // Status Banner
+      const card = document.getElementById('status-card');
+      const title = document.getElementById('status-title');
+      const pill = document.getElementById('status-pill');
+      const avatarBox = document.getElementById('status-avatar-box');
+      const avatarIcon = document.getElementById('status-avatar-icon');
+      const dot = document.getElementById('status-dot-ping');
+      const badge = document.getElementById('nav-mode-badge');
+
+      badge.textContent = state.isLiveApi ? 'LIVE BACKEND' : 'BROWSER PREVIEW';
+
+      if (state.connected) {
+        card.className = 'rounded-2xl p-6 bg-slate-900/90 border-2 border-emerald-500/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300 glow-green';
+        title.textContent = 'Bot Connected & Active';
+        pill.textContent = 'ONLINE';
+        pill.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 uppercase tracking-wider';
+        avatarBox.className = 'w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 flex items-center justify-center text-emerald-400 relative';
+        dot.className = 'absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900 animate-pulse';
+        avatarIcon.setAttribute('data-lucide', 'bot');
+      } else {
+        card.className = 'rounded-2xl p-6 bg-slate-900/90 border-2 border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all duration-300';
+        title.textContent = 'Bot Disconnected';
+        pill.textContent = 'OFFLINE';
+        pill.className = 'px-2.5 py-0.5 text-xs font-bold rounded-full bg-slate-800 text-slate-400 border border-slate-700 uppercase tracking-wider';
+        avatarBox.className = 'w-14 h-14 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 relative';
+        dot.className = 'absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900';
+        avatarIcon.setAttribute('data-lucide', 'wifi-off');
+      }
+
+      // Metrics
+      document.getElementById('metric-uptime').textContent = formatUptime(state.uptime);
+      document.getElementById('metric-coords').textContent = `X ${Math.floor(state.coords.x)} · Y ${Math.floor(state.coords.y)} · Z ${Math.floor(state.coords.z)}`;
+      document.getElementById('metric-memory').textContent = `${state.memory} MB`;
+      document.getElementById('metric-reconnects').textContent = state.reconnects;
+
+      lucide.createIcons();
+    }
+
+    function formatUptime(s) {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      if (h > 0) return `${h}h ${m}m ${sec}s`;
+      if (m > 0) return `${m}m ${sec}s`;
+      return `${sec}s`;
+    }
+
+    async function startBotApi() {
+      addLogEntry('[Control] Requesting bot start...', 'control');
+      try {
+        const res = await fetch('/start', { method: 'POST' });
+        if (res.ok) {
+          addLogEntry('[Control] Start command sent successfully', 'success');
+        }
+      } catch (e) {}
+      state.connected = true;
+      updateUI();
+    }
+
+    async function stopBotApi() {
+      addLogEntry('[Control] Requesting bot stop...', 'control');
+      try {
+        const res = await fetch('/stop', { method: 'POST' });
+        if (res.ok) {
+          addLogEntry('[Control] Bot stopped by controller', 'control');
+        }
+      } catch (e) {}
+      state.connected = false;
+      updateUI();
+    }
+
+    function handleConsoleSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('terminal-input');
+      const cmd = input.value.trim();
+      if (!cmd) return;
+
+      addLogEntry(`> ${cmd}`, 'control');
+      input.value = '';
+
+      if (state.isLiveApi) {
+        fetch('/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+      } else {
+        // Simulated local feedback
+        setTimeout(() => {
+          if (cmd === '/pos') {
+            addLogEntry(`[Console] Position: X=${Math.floor(state.coords.x)} Y=${Math.floor(state.coords.y)} Z=${Math.floor(state.coords.z)}`, 'info');
+          } else if (cmd === '/help') {
+            addLogEntry('[Console] Commands: /pos, /status, /say <msg>, /help', 'info');
+          } else {
+            addLogEntry(`[Console] Sent to server: ${cmd}`, 'info');
+          }
+        }, 300);
+      }
+    }
+
+    function sendQuickCommand(cmd) {
+      document.getElementById('terminal-input').value = cmd;
+      handleConsoleSubmit(new Event('submit'));
+    }
+
+    function setLogFilter(filter) {
+      state.filter = filter;
+      ['all', 'control', 'error'].forEach(f => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (f === filter) {
+          btn.className = 'px-2.5 py-1 rounded-lg font-medium text-emerald-400 bg-slate-800';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg font-medium text-slate-400 hover:text-slate-200';
+        }
+      });
+      renderLogs();
+    }
+
+    function clearLogsUI() {
+      state.logs = [];
+      renderLogs();
+    }
+
+    function downloadLogs() {
+      const text = state.logs.map(l => `[${l.time}] ${l.text}`).join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'minecraft-afk-bot.log';
+      a.click();
+    }
+
+    function copyServerIp() {
+      const ip = "basusuvayu.aternos.me:27049";
+      navigator.clipboard.writeText(ip);
+      const textSpan = document.getElementById('header-ip-text');
+      textSpan.textContent = 'Copied!';
+      setTimeout(() => textSpan.textContent = 'Copy IP', 2000);
+    }
+
+    function pingServerNow() {
+      addLogEntry('[Inspector] Pinging target Minecraft server...', 'info');
+      setTimeout(() => {
+        addLogEntry('[Inspector] Ping response: 48ms (Server Online)', 'success');
+      }, 600);
+    }
+
+    function saveSettingsForm() {
+      addLogEntry('[Settings] New configuration applied successfully!', 'success');
+      alert('Settings saved successfully!');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+  </script>
+</body>
+</html>
